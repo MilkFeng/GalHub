@@ -21,6 +21,8 @@ else ()
     message(STATUS "32-bit architecture detected, will configure for Hook-x86.dll and Helper.exe")
 endif ()
 
+add_subdirectory(3rdparty/minhook)
+
 # configure MinHook dll ========================================
 add_library(Hook SHARED src/hook/main.cpp
         src/common/json_extend.hpp
@@ -29,14 +31,10 @@ add_library(Hook SHARED src/hook/main.cpp
 
 # MinHook library
 target_include_directories(Hook PUBLIC "3rdparty/minhook/include")
-if (X64)
-    target_link_libraries(Hook "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minhook/lib/libMinHook-x64-v141-mt.lib")
-else ()
-    target_link_libraries(Hook "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/minhook/lib/libMinHook-x86-v141-mt.lib")
-endif ()
+target_link_libraries(Hook PRIVATE minhook)
 
 # Jsonxx library
-target_include_directories(Hook PUBLIC "3rdparty/configor")
+target_include_directories(Hook PUBLIC "3rdparty/configor/include/configor")
 
 # configure Helper exe ========================================
 if (NOT X64)
@@ -48,11 +46,21 @@ if (NOT X64)
             src/common/util.cpp)
 
     # Jsonxx library
-    target_include_directories(Helper PUBLIC "3rdparty/configor")
+    target_include_directories(Helper PUBLIC "3rdparty/configor/include/configor")
 endif ()
 
 # configure GalHub exe ========================================
 if (X64)
+    # because Qt6 may not support Debug mode, we need to save the original build type and set it to Release
+    if (CMAKE_BUILD_TYPE STREQUAL Debug)
+        set(_CMAKE_BUILD_TYPE Debug)
+    else ()
+        set(_CMAKE_BUILD_TYPE Release)
+    endif ()
+
+    set(CMAKE_BUILD_TYPE Release)
+
+
     set(CMAKE_PREFIX_PATH $ENV{QT6_PATH})
     find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
     qt_standard_project_setup()
@@ -63,8 +71,10 @@ if (X64)
             src/hub/gui/main_window.cpp
             src/hub/gui/game_table.h
             src/hub/gui/game_table.cpp
-            src/hub/gui/add_game_dialog.h
-            src/hub/gui/add_game_dialog.cpp
+            src/hub/gui/game_config_rules_widget.h
+            src/hub/gui/game_config_rules_widget.cpp
+            src/hub/gui/game_config_dialog.h
+            src/hub/gui/game_config_dialog.cpp
 
             src/common/json_extend.hpp
             src/common/env.cpp
@@ -78,10 +88,11 @@ if (X64)
 
     target_link_libraries(GalHub PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
 
-    if(CMAKE_BUILD_TYPE STREQUAL Release)
+    # if the original build type is Debug, show console window
+    if (_CMAKE_BUILD_TYPE STREQUAL Release)
         set_property(TARGET GalHub PROPERTY WIN32_EXECUTABLE TRUE)
-    endif()
+    endif ()
 
     # Jsonxx library
-    target_include_directories(GalHub PUBLIC "3rdparty/configor")
+    target_include_directories(GalHub PUBLIC "3rdparty/configor/include/configor")
 endif ()

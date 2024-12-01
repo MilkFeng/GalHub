@@ -7,8 +7,10 @@ int main (int argc, char *argv[]) {
     EnvManager::instance().read_config();
     EnvManager::instance().init_env();
 
-    QApplication a(argc, argv);
+    QApplication app(argc, argv);
+    app.setStyle("Fusion");
+
     MainWindow w;
     w.show();
-    return a.exec();
+    return app.exec();
 }

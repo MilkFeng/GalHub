@@ -7,16 +7,57 @@
 #include <minwindef.h>
 #include <windows.h>
 
-GameConfig::GameConfig (Path original_game_path, String game_name, std::vector<Rule> rules)
-    : original_game_path(std::move(original_game_path)), game_name(std::move(game_name)), rules(std::move(rules)) {
+GameConfig::GameConfig (Path thumbnail_path, Path original_game_path, String game_name, std::vector<Rule> rules)
+    : thumbnail_path(std::move(thumbnail_path)), original_game_path(std::move(original_game_path)),
+      game_name(std::move(game_name)), rules(std::move(rules)) {
 }
 
-GameConfig::GameConfig (Path original_game_path, String game_name)
-    : original_game_path(std::move(original_game_path)), game_name(std::move(game_name)) {
+GameConfig::GameConfig (Path thumbnail_path, Path original_game_path, String game_name)
+    : thumbnail_path(std::move(thumbnail_path)), original_game_path(std::move(original_game_path)),
+      game_name(std::move(game_name)) {
 }
 
 void GameConfig::add_rule (const Rule &rule) {
     rules.push_back(rule);
+}
+
+bool GameConfig::check_meta_info (String &message) const {
+    if (original_game_path.empty() || game_name.empty()) {
+        message = L"游戏路径和游戏名不能为空";
+        return false;
+    }
+
+    if (original_game_path.extension() != L".exe") {
+        message = L"游戏路径必须是exe文件";
+        return false;
+    }
+
+    if (!std::filesystem::exists(original_game_path)) {
+        message = L"游戏路径不存在";
+        return false;
+    }
+
+    if (!thumbnail_path.empty() && !std::filesystem::exists(thumbnail_path)) {
+        message = L"缩略图路径不存在";
+        return false;
+    }
+    return true;
+}
+
+bool GameConfig::check_rules (String &message) const {
+    return true;
+}
+
+bool GameConfig::check (String &message) const {
+    if (!check_meta_info(message)) {
+        return false;
+    }
+
+    if (!check_rules(message)) {
+        return false;
+    }
+
+    return true;
 }
 
 
@@ -30,8 +71,12 @@ bool Config::has_game (const String &game_name) const {
     return game_configs.find(game_name) != game_configs.end();
 }
 
-void Config::upsert_game (const String &game_name, const GameConfig &game_config) {
-    game_configs[game_name] = game_config;
+void Config::upsert_game (const GameConfig &game_config) {
+    game_configs[game_config.game_name] = game_config;
+}
+
+void Config::del_game (const String &game_name) {
+    game_configs.erase(game_name);
 }
 
 EnvManager &EnvManager::instance () {
@@ -46,17 +91,29 @@ void EnvManager::init_env () const {
         std::filesystem::create_directory(env_folder_);
     }
 
-    for (const auto &[game_name, game_config]: config().game_configs) {
-        Path game_folder = env_folder_ / game_name;
-        if (!std::filesystem::exists(game_folder)) {
-            std::filesystem::create_directory(game_folder);
-        }
+    for (const auto &[_, game_config]: config().game_configs) {
+        init_env_of_game(game_config);
+    }
+}
 
-        for (const auto &rule: game_config.rules) {
-            Path src_folder = game_folder / rule.dst_name;
-            if (!std::filesystem::exists(src_folder)) {
-                std::filesystem::create_directory(src_folder);
-            }
+void EnvManager::init_env_of_game (const String &game_name) const {
+    init_env_of_game(config().game_configs.at(game_name));
+}
+
+void EnvManager::init_env_of_game (const GameConfig &game_config) const {
+    Path env_folder_ = env_folder();
+    if (!std::filesystem::exists(env_folder_)) {
+        std::filesystem::create_directory(env_folder_);
+    }
+    Path game_folder = env_folder_ / game_config.game_name;
+    if (!std::filesystem::exists(game_folder)) {
+        std::filesystem::create_directory(game_folder);
+    }
+
+    for (const auto &rule: game_config.rules) {
+        Path src_folder = game_folder / rule.dst_name;
+        if (!std::filesystem::exists(src_folder)) {
+            std::filesystem::create_directory(src_folder);
         }
     }
 }

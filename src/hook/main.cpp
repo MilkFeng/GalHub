@@ -231,8 +231,7 @@ static void Hook () {
     gEnv = Env::read_env();
 
 #if DEBUG
-    std::wstring debug_info = L"@MilkFeng Rules[0]: "s + gEnv.rules[0].src_base + L" "s + gEnv.rules[0].src.c_str() +
-                              L" "s + gEnv.rules[0].dst_name + L"\n"s;
+    std::wstring debug_info = L"@MilkFeng Rules Count: "s + std::to_wstring(gEnv.rules.size()) + L"\n"s;
     OutputDebugStringW(debug_info.c_str());
 #endif
 

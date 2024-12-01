@@ -34,8 +34,7 @@ FARPROC Runner::get_remote_kernel32_LoadLibraryW_address () {
 
     std::wcout << L"exe_path: "sv << exe_path_str << std::endl;
 
-    if (!CreateProcessW(exe_path_str, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr,
-                        reinterpret_cast<LPSTARTUPINFOW>(&si), &pi)) {
+    if (!CreateProcessW(exe_path_str, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
         std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
         throw std::runtime_error("CreateProcess failed");
     }

@@ -5,7 +5,7 @@ set p2=%2
 set p3=%3
 
 set QT6_PATH=C:\Qt\6.5.3\Qt6.5.3-Windows-x86_64-VS2022-17.10.0-staticFull
-set VC_VARS_BAT=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
+set VC_VARS_BAT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat
 
 set ROOT_DIR=%cd%
 
@@ -13,6 +13,28 @@ set BUILD_X64_DIR=%ROOT_DIR%\build-x64
 set BUILD_X86_DIR=%ROOT_DIR%\build-x86
 
 set DIST_DIR=%ROOT_DIR%\dist
+
+:: DEBUG MODE =========================================
+
+if "%p1%"=="debug" goto debug_if
+if "%p2%"=="debug" goto debug_if
+if "%p3%"=="debug" goto debug_if
+goto debug_else
+
+:debug_if
+echo Debug MODE
+set BUILD_TYPE=Debug
+set BUILD_X64_DIR=%BUILD_X64_DIR%-debug
+set BUILD_X86_DIR=%BUILD_X86_DIR%-debug
+goto debug_end
+
+:debug_else
+echo Release MODE
+set BUILD_TYPE=Release
+
+:debug_end
+
+:: DEBUG MODE END =====================================
 
 :: CLEAN ==============================================
 
@@ -33,30 +55,12 @@ rmdir /s /q "%DIST_DIR%"
 
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 
-:: DEBUG MODE =========================================
-
-if "%p1%"=="debug" goto debug_if
-if "%p2%"=="debug" goto debug_if
-if "%p3%"=="debug" goto debug_if
-goto debug_else
-
-:debug_if
-echo Debug MODE
-set BUILD_TYPE=Debug
-goto debug_end
-
-:debug_else
-echo Release MODE
-set BUILD_TYPE=Release
-
-:debug_end
-
-:: DEBUG MODE END =====================================
-
 :: BUILD ==============================================
 
 set DIST_BIN_DIR=%DIST_DIR%\Bin
 if not exist "%DIST_BIN_DIR%" mkdir "%DIST_BIN_DIR%"
+
+
 
 call "%VC_VARS_BAT%" x86
 

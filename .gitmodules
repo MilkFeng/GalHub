@@ -1,0 +1,7 @@
+[submodule "3rdparty/configor"]
+	path = 3rdparty/configor
+	url = https://github.com/Nomango/configor.git
+	branch = v0.9.21
+[submodule "3rdparty/minhook"]
+	path = 3rdparty/minhook
+	url = https://github.com/TsudaKageyu/minhook.git

@@ -9,18 +9,25 @@
 #include "../common/env.h"
 
 struct GameConfig {
+    Path thumbnail_path;            // thumbnail path
     Path original_game_path;        // game exe path
+
     String game_name;               // game name
 
     std::vector<Rule> rules;        // rules
 
-    CONFIGOR_BIND(Json::value, GameConfig, REQUIRED_WIDE(original_game_path), REQUIRED_WIDE(game_name), REQUIRED_WIDE(rules));
+    CONFIGOR_BIND(Json::value, GameConfig, REQUIRED_WIDE(thumbnail_path), REQUIRED_WIDE(original_game_path),
+                  REQUIRED_WIDE(game_name), REQUIRED_WIDE(rules));
 
     GameConfig () = default;
-    GameConfig (Path original_game_path, String game_name, std::vector<Rule> rules);
-    GameConfig (Path original_game_path, String game_name);
+    GameConfig (Path thumbnail_path, Path original_game_path, String game_name, std::vector<Rule> rules);
+    GameConfig (Path thumbnail_path, Path original_game_path, String game_name);
 
     void add_rule (const Rule &rule);
+
+    bool check_meta_info (String &message) const;
+    bool check_rules (String &message) const;
+    bool check (String &message) const;
 };
 
 struct Config {
@@ -32,7 +39,8 @@ struct Config {
     static Config default_config ();
 
     [[nodiscard]] bool has_game (const String &game_name) const;
-    void upsert_game (const String &game_name, const GameConfig &game_config);
+    void upsert_game (const GameConfig &game_config);
+    void del_game (const String &game_name);
 };
 
 class EnvManager final : public QObject {
@@ -47,6 +55,8 @@ public:
     static EnvManager &instance();
 
     void init_env () const;
+    void init_env_of_game (const String &game_name) const;
+    void init_env_of_game (const GameConfig &game_config) const;
 
     [[nodiscard]] const Config &config() const;
     void upd_config (const Config &config);
