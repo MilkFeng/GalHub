@@ -1,7 +1,6 @@
 #include "env.h"
 
 #include <fstream>
-#include <iostream>
 #include <map>
 #include <windows.h>
 #include <PathCch.h>
@@ -73,10 +72,35 @@ std::map<String, Path> SystemFolders::to_map () const {
     };
 }
 
+std::set<String> SystemFolders::vars () {
+    return {
+        L"USER_PROFILE",
+
+        L"DESKTOP",
+        L"DOCUMENTS",
+        L"DOWNLOADS",
+        L"MUSIC",
+        L"PICTURES",
+        L"VIDEOS",
+        L"SAVED_GAMES",
+
+        L"APP_DATA",
+        L"LOCAL_APP_DATA",
+        L"LOCAL_LOW_APP_DATA"
+    };
+}
+
 std::map<String, Path> EnvFolders::to_map () const {
     return {
         {L"ENV", env_folder},
         {L"GAME", game_folder}
+    };
+}
+
+std::set<String> EnvFolders::vars () {
+    return {
+        L"ENV",
+        L"GAME"
     };
 }
 
@@ -182,4 +206,10 @@ void Env::write_env (const Env &env) {
     }
 
     file << Json::wrap(env);
+}
+
+std::set<String> Env::folder_vars () {
+    std::set<String> result = SystemFolders::vars();
+    result.merge(EnvFolders::vars());
+    return result;
 }

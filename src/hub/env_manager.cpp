@@ -3,13 +3,35 @@
 
 #include <fstream>
 #include <iostream>
+#include <utility>
 #include <minwindef.h>
 #include <windows.h>
+
+GameConfig::GameConfig (Path original_game_path, String game_name, std::vector<Rule> rules)
+    : original_game_path(std::move(original_game_path)), game_name(std::move(game_name)), rules(std::move(rules)) {
+}
+
+GameConfig::GameConfig (Path original_game_path, String game_name)
+    : original_game_path(std::move(original_game_path)), game_name(std::move(game_name)) {
+}
+
+void GameConfig::add_rule (const Rule &rule) {
+    rules.push_back(rule);
+}
+
 
 Config Config::default_config () {
     Config config;
     config.env_folder_name = L"Env";
     return config;
+}
+
+bool Config::has_game (const String &game_name) const {
+    return game_configs.find(game_name) != game_configs.end();
+}
+
+void Config::upsert_game (const String &game_name, const GameConfig &game_config) {
+    game_configs[game_name] = game_config;
 }
 
 EnvManager &EnvManager::instance () {
@@ -39,8 +61,13 @@ void EnvManager::init_env () const {
     }
 }
 
-const Config & EnvManager::config () const {
+const Config &EnvManager::config () const {
     return _config;
+}
+
+void EnvManager::upd_config (const Config &config) {
+    _config = config;
+    emit config_changed();
 }
 
 static Path working_dir () {
@@ -65,7 +92,7 @@ void EnvManager::read_config () {
 
     if (!std::filesystem::exists(config_file_path)) {
         // if config file does not exist, create one
-        _config = Config::default_config();
+        upd_config(Config::default_config());
         write_config();
         return;
     }
@@ -79,7 +106,8 @@ void EnvManager::read_config () {
     while (std::getline(file, t)) {
         s += t + L"\n";
     }
-    _config = Json::parse(s);
+
+    upd_config(Json::parse(s));
 }
 
 void EnvManager::write_config () const {

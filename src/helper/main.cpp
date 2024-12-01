@@ -1,4 +1,4 @@
-#include "../common/inject.h"
+#include "../common/util.h"
 #include <iostream>
 
 void SendKernel32AddressToParent () {
@@ -7,7 +7,7 @@ void SendKernel32AddressToParent () {
         std::cerr << "get_kernel32_LoadLibraryW_address failed" << std::endl;
     }
 
-    // create named pipe
+    // create file handle
     HANDLE hPipe = CreateFileW(PIPE_NAME,GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING,
                                FILE_ATTRIBUTE_NORMAL, nullptr);
 

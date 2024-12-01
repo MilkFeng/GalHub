@@ -4,7 +4,6 @@
 #include <Windows.h>
 #undef WIN32_NO_STATUS
 
-#include <fstream>
 #include <iostream>
 #include <MinHook.h>
 

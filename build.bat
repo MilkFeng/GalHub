@@ -4,6 +4,7 @@ set p1=%1
 set p2=%2
 set p3=%3
 
+set QT6_PATH=C:\Qt\6.5.3\Qt6.5.3-Windows-x86_64-VS2022-17.10.0-staticFull
 set VC_VARS_BAT=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat
 
 set ROOT_DIR=%cd%
@@ -40,24 +41,21 @@ if "%p3%"=="debug" goto debug_if
 goto debug_else
 
 :debug_if
-echo Debug
-set DIST_DIR=%DIST_DIR%\debug
+echo Debug MODE
 set BUILD_TYPE=Debug
-
-if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
-
 goto debug_end
 
 :debug_else
-echo Release
+echo Release MODE
 set BUILD_TYPE=Release
 
 :debug_end
 
 :: DEBUG MODE END =====================================
 
-set DIST_BIN_DIR=%DIST_DIR%\Bin
+:: BUILD ==============================================
 
+set DIST_BIN_DIR=%DIST_DIR%\Bin
 if not exist "%DIST_BIN_DIR%" mkdir "%DIST_BIN_DIR%"
 
 call "%VC_VARS_BAT%" x86
@@ -75,6 +73,7 @@ copy "%BUILD_X86_DIR%\Helper.exe" "%DIST_BIN_DIR%\Helper.exe" /b
 cd %ROOT_DIR%
 
 
+
 call "%VC_VARS_BAT%" x64
 
 cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -G Ninja -S "%ROOT_DIR%" -B "%BUILD_X64_DIR%"
@@ -88,6 +87,8 @@ echo Copy GalHub.exe
 copy "%BUILD_X64_DIR%\GalHub.exe" "%DIST_DIR%\GalHub.exe" /b
 
 cd %ROOT_DIR%
+
+
 
 if "%p1%"=="run" goto run
 if "%p2%"=="run" goto run

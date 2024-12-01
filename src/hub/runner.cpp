@@ -1,5 +1,5 @@
 #include "runner.h"
-#include "../common/inject.h"
+#include "../common/util.h"
 
 #include <fstream>
 
@@ -213,12 +213,10 @@ bool Runner::determine_if_x64 (const Path &file_path) {
 }
 
 void Runner::run (const String &game_name) {
-    EnvManager env_manager = EnvManager::instance();
+    EnvManager *env_manager = &EnvManager::instance();
+    env_manager->gen_env_for_game(game_name);
 
-    env_manager.read_config();
-    env_manager.gen_env_for_game(game_name);
-
-    auto config = env_manager.config();
+    auto config = env_manager->config();
     auto game_config = config.game_configs[game_name];
 
     Path exe_path = game_config.original_game_path;

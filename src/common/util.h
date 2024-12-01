@@ -1,5 +1,5 @@
-#ifndef INJECT_H
-#define INJECT_H
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <Windows.h>
 
@@ -9,4 +9,4 @@ FARPROC get_kernel32_LoadLibraryW_address();
 
 
 
-#endif //INJECT_H
+#endif //UTIL_H
