@@ -3,14 +3,18 @@
 
 #include <QTableWidget>
 #include <QDir>
+#include <QList>
+
+#include "../../common/env.h"
 
 struct GameItem {
     QPixmap thumbnail;
     QString name;
     QDir path;
+    QList<Rule> rules;
 };
 
-class GameTable : public QTableWidget {
+class GameTableWidget : public QTableWidget {
     Q_OBJECT
 
     void clear_table ();
@@ -18,8 +22,9 @@ class GameTable : public QTableWidget {
 
     void show_context_menu (const QPoint &pos, int row);
 
+    void sort_by_column (int column);
 public:
-    explicit GameTable(QWidget *parent = nullptr);
+    explicit GameTableWidget(QWidget *parent = nullptr);
 
 private slots:
     void on_config_upd ();
@@ -29,20 +34,6 @@ private slots:
 
     void on_edit_action_triggered (int row) const;
     void on_delete_action_triggered (int row) const;
-};
-
-class GameTableEventFilter : public QObject {
-    Q_OBJECT
-
-    GameTable *table;
-
-    void deselect (QMouseEvent *e) const;
-
-protected:
-    bool eventFilter (QObject *watched, QEvent *event) override;
-
-public:
-    explicit GameTableEventFilter (GameTable *table);
 };
 
 

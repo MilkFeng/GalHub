@@ -12,16 +12,6 @@ using namespace std::literals;
 
 #define MKPTR(p1,p2) ((DWORD_PTR)(p1) + (DWORD_PTR)(p2))
 
-
-static Path working_dir () {
-    wchar_t path[MAX_PATH];
-    if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) {
-        throw std::runtime_error("Failed to get module file name");
-    }
-
-    return std::filesystem::absolute(path).parent_path();
-}
-
 Path Runner::helper_exe_path () {
     return working_dir() / HELPER_EXE_NAME;
 }
@@ -32,9 +22,9 @@ FARPROC Runner::get_remote_kernel32_LoadLibraryW_address () {
     PROCESS_INFORMATION pi;
     LPCWSTR exe_path_str = helper_exe_path().c_str();
 
-    std::wcout << L"exe_path: "sv << exe_path_str << std::endl;
-
-    if (!CreateProcessW(exe_path_str, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) {
+    if (!CreateProcessW(exe_path_str, nullptr, nullptr,
+                        nullptr, FALSE, CREATE_NO_WINDOW,
+                        nullptr, nullptr, &si, &pi)) {
         std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
         throw std::runtime_error("CreateProcess failed");
     }
@@ -218,7 +208,7 @@ void Runner::run (const String &game_name) {
     auto config = env_manager->config();
     auto game_config = config.game_configs[game_name];
 
-    Path exe_path = game_config.original_game_path;
+    Path exe_path = game_config.original_game_full_path();
     bool is_x64 = determine_if_x64(exe_path);
 
     inject_run(exe_path, dll_path(is_x64), is_x64);

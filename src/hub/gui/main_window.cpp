@@ -18,7 +18,7 @@ MainWindow::MainWindow (QWidget *parent) {
     setMenuBar(menuBar);
 
     // 添加一个表格
-    auto *gameTable = new GameTable(this);
+    auto *gameTable = new GameTableWidget(this);
     setCentralWidget(gameTable);
 }
 

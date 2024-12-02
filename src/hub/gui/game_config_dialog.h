@@ -1,13 +1,11 @@
 #ifndef ADD_GAME_DIALOG_H
 #define ADD_GAME_DIALOG_H
 
-#include <QPushButton>
 #include <QDialog>
 #include <QLabel>
-#include <QLineEdit>
-#include <QListWidget>
 
-
+#include "path_edit_group.h"
+#include "game_config_rules_widget.h"
 #include "../env_manager.h"
 
 class GameConfigDialog : public QDialog {
@@ -18,6 +16,13 @@ class GameConfigDialog : public QDialog {
     QString _game_name;
     QString _thumbnail_path;
     QString _original_game_path;
+
+    GameConfigRulesWidget *rules_widget;
+
+    GameConfig _input_game_config;
+
+    QLabel *thumbnail;
+
 
     bool edit_mode;
 
@@ -31,40 +36,7 @@ public:
 
 private slots:
     void on_ok_button_clicked ();
-};
-
-
-class GameConfigPathEdit : public QObject {
-    Q_OBJECT
-
-    QString &path;
-    QString filter;
-
-public:
-    QLabel *label;
-    QLineEdit *line_edit;
-    QPushButton *button;
-
-    explicit GameConfigPathEdit (QString &path, const QString &label_text = QString(), QString filter = QString(), QWidget *parent = nullptr);
-
-private slots:
-    void on_button_clicked () const;
-    void on_line_edit_text_changed () const;
-};
-
-class GameConfigTextEdit : public QObject {
-    Q_OBJECT
-
-    QString &text;
-
-public:
-    QLabel *label;
-    QLineEdit *line_edit;
-
-    explicit GameConfigTextEdit (QString &text, const QString &label_text = QString(), QWidget *parent = nullptr);
-
-private slots:
-    void on_line_edit_text_changed () const;
+    void on_thumbnail_path_changed (const QString &path) const;
 };
 
 #endif //ADD_GAME_DIALOG_H

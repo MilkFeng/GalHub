@@ -9,8 +9,8 @@
 #include "../common/env.h"
 
 struct GameConfig {
-    Path thumbnail_path;            // thumbnail path
-    Path original_game_path;        // game exe path
+    Path thumbnail_path;            // thumbnail path relative to the hub root dir
+    Path original_game_path;        // game exe path relative to the hub root dir
 
     String game_name;               // game name
 
@@ -22,6 +22,9 @@ struct GameConfig {
     GameConfig () = default;
     GameConfig (Path thumbnail_path, Path original_game_path, String game_name, std::vector<Rule> rules);
     GameConfig (Path thumbnail_path, Path original_game_path, String game_name);
+
+    [[nodiscard]] Path thumbnail_full_path () const;
+    [[nodiscard]] Path original_game_full_path () const;
 
     void add_rule (const Rule &rule);
 
@@ -50,6 +53,8 @@ class EnvManager final : public QObject {
     static constexpr auto CONFIG_FILE_NAME = L"config.json";
 
     EnvManager () = default;
+    EnvManager (const EnvManager &) = delete;
+    EnvManager &operator= (const EnvManager &) = delete;
 
 public:
     static EnvManager &instance();
@@ -68,6 +73,10 @@ public:
     void write_config () const;
 
     void gen_env_for_game (const String &game_name) const;
+    Env get_env_for_game (const String &game_name) const;
+
+    static const std::vector<String> &folder_vars ();
+    Path folder_var_to_path (const String &var, const String &game_name) const;
 
 signals:
     void config_changed ();

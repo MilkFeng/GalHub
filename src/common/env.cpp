@@ -7,11 +7,21 @@
 #include <shlobj.h>
 #include <vector>
 
+#include "util.h"
+
+using namespace std::literals;
+
 static Path get_env_var (const wchar_t *name) {
     wchar_t *path;
     _wdupenv_s(&path, nullptr, name);
     std::wstring result = path;
     free(path);
+
+    // if path do not end with '\' or '/', append it
+    if (result.back() != L'\\' && result.back() != L'/') {
+        result += L'\\';
+    }
+
     return std::filesystem::absolute(result);
 }
 
@@ -25,6 +35,12 @@ static Path get_folder_path (_In_ REFKNOWNFOLDERID rfid) {
 
     std::wstring wpath = path;
     CoTaskMemFree(path);
+
+    // if path do not end with '\' or '/', append it
+    if (wpath.back() != L'\\' && wpath.back() != L'/') {
+        wpath += L'\\';
+    }
+
     return std::filesystem::absolute(wpath);
 }
 
@@ -72,8 +88,8 @@ std::map<String, Path> SystemFolders::to_map () const {
     };
 }
 
-std::set<String> SystemFolders::vars () {
-    return {
+const std::vector<String> &SystemFolders::vars () {
+    static std::vector<String> vars = {
         L"USER_PROFILE",
 
         L"DESKTOP",
@@ -88,20 +104,22 @@ std::set<String> SystemFolders::vars () {
         L"LOCAL_APP_DATA",
         L"LOCAL_LOW_APP_DATA"
     };
+    return vars;
 }
 
 std::map<String, Path> EnvFolders::to_map () const {
     return {
         {L"ENV", env_folder},
-        {L"GAME", game_folder}
+        {L"GAME", original_game_folder}
     };
 }
 
-std::set<String> EnvFolders::vars () {
-    return {
+const std::vector<String> &EnvFolders::vars () {
+    static std::vector<String> vars = {
         L"ENV",
         L"GAME"
     };
+    return vars;
 }
 
 
@@ -132,23 +150,77 @@ static TranslatedRule translate_rule (const Env &env, const Rule &rule) {
         src = rule.src;
     }
 
-    Path dst = env.env_folders.game_folder / rule.dst_name;
+    Path dst = (env.env_folders.game_folder / rule.dst_name).wstring() + L"\\";
 
     return TranslatedRule{src, dst};
 }
 
+static std::wstring to_lower (const std::wstring &s) {
+    std::wstring result = s;
+    std::transform(result.begin(), result.end(), result.begin(), ::towlower);
+    return result;
+}
+
 
 static bool apply_rule_inner (const Path &path, const TranslatedRule &rule, Path &result) {
+    // disk letter must be the same
+#ifdef DEBUG
+    std::wstring debug_info = L"@MilkFeng apply_rule_inner: "s + path.wstring() + L" "s + rule.src.wstring() + L" "s + rule.dst.wstring() + L"\n"s;
+    OutputDebugStringW(debug_info.c_str());
+#endif
+
+    Path path_ = to_lower(path);
+    Path src_ = to_lower(rule.src);
+    Path dst_ = to_lower(rule.dst);
+
+#ifdef DEBUG
+    debug_info = L"@MilkFeng apply_rule_inner 3: "s + absolute(path_).wstring() + L" " + absolute(src_).wstring() + L"\n"s;
+    OutputDebugStringW(debug_info.c_str());
+
+    debug_info = L"@MilkFeng apply_rule_inner 3.1: "s + std::to_wstring(absolute(path_).wstring().find(absolute(src_).wstring())) + L" "s + std::to_wstring(std::wstring::npos) + L"\n"s;
+    OutputDebugStringW(debug_info.c_str());
+#endif
+
     // if path is not in src, return false
-    if (absolute(path).wstring().find(absolute(rule.src).wstring()) == std::string::npos) {
+    if (absolute(path_).wstring().find(absolute(src_).wstring()) == std::wstring::npos) {
+#ifdef DEBUG
+        OutputDebugStringW(L"@MilkFeng apply_rule_inner 3.2: not found\n");
+#endif
         return false;
     }
 
+#ifdef DEBUG
+    OutputDebugStringW(L"@MilkFeng apply_rule_inner 4.0\n");
+#endif
+
     // calculate relative path
-    Path relative = path.lexically_relative(rule.src);
+    std::wstring abs_new_path = absolute(path_).wstring();
+    std::wstring abs_rule_src = absolute(src_).wstring();
+    int start = abs_new_path.find(abs_rule_src);
+    Path relative = abs_new_path.substr(start + abs_rule_src.size());
+
+    // delete the first '\'
+    while (!relative.empty() && relative.wstring().front() == L'\\') {
+        relative = relative.wstring().substr(1);
+    }
+
+    if (relative.empty()) {
+        result = dst_;
+        return true;
+    }
+#ifdef DEBUG
+    debug_info = L"@MilkFeng apply_rule_inner 4: "s + relative.wstring() + L" " + path_.wstring() + L" " + src_.wstring() + L"\n"s;
+    OutputDebugStringW(debug_info.c_str());
+#endif
 
     // concat relative path with dst
-    result = rule.dst / relative;
+    result = dst_ / relative;
+
+#ifdef DEBUG
+    debug_info = L"@MilkFeng apply_rule_inner 4 5: "s + result.wstring() + L"\n"s;
+    OutputDebugStringW(debug_info.c_str());
+#endif
+
     return true;
 }
 
@@ -182,16 +254,13 @@ Path Env::env_path () {
 }
 
 Env Env::read_env () {
-    Path filePath = env_path();
-    std::wfstream file(filePath, std::ios::in);
+    Path file_path = env_path();
+    std::wfstream file(file_path, std::ios::in);
     if (!file) {
         throw std::runtime_error("Failed to open file");
     }
 
-    String s, t;
-    while (std::getline(file, t)) {
-        s += t + L"\n";
-    }
+    std::wstring s = read_wstring_from_file(file_path);
     return Json::parse(s);
 }
 
@@ -200,16 +269,42 @@ void Env::write_env (const Env &env) {
     if (!std::filesystem::exists(filePath.parent_path())) {
         std::filesystem::create_directories(filePath.parent_path());
     }
-    std::wfstream file(filePath, std::ios::out);
-    if (!file) {
-        throw std::runtime_error("Failed to open file");
-    }
 
-    file << Json::wrap(env);
+    std::wstring s = Json::dump(env);
+    write_wstring_to_file(filePath, s);
 }
 
-std::set<String> Env::folder_vars () {
-    std::set<String> result = SystemFolders::vars();
-    result.merge(EnvFolders::vars());
-    return result;
+const std::vector<String> &Env::folder_vars () {
+    static bool initialized = false;
+    static std::vector<String> vars;
+
+    if (!initialized) {
+        std::vector<String> system_vars = SystemFolders::vars();
+        std::vector<String> env_vars = EnvFolders::vars();
+
+        vars.reserve(1 + system_vars.size() + env_vars.size());
+        vars.insert(vars.end(), system_vars.begin(), system_vars.end());
+        vars.insert(vars.end(), env_vars.begin(), env_vars.end());
+
+        // add an empty string to represent no base path
+        vars.emplace_back(L"");
+
+        initialized = true;
+    }
+    return vars;
+}
+
+Path Env::folder_var_to_path (const String &var) const {
+    const auto &system_vars = SystemFolders::vars();
+    const auto &env_vars = EnvFolders::vars();
+
+    if (var.empty()) {
+        return {};
+    } else if (std::find(system_vars.begin(), system_vars.end(), var) != system_vars.end()) {
+        return system_folders.to_map()[var];
+    } else if (std::find(env_vars.begin(), env_vars.end(), var) != env_vars.end()) {
+        return env_folders.to_map()[var];
+    } else {
+        throw std::runtime_error("Unknown base path");
+    }
 }

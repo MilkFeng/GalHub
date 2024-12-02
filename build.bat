@@ -9,10 +9,8 @@ set VC_VARS_BAT=C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\V
 
 set ROOT_DIR=%cd%
 
-set BUILD_X64_DIR=%ROOT_DIR%\build-x64
-set BUILD_X86_DIR=%ROOT_DIR%\build-x86
-
 set DIST_DIR=%ROOT_DIR%\dist
+set DIST_BIN_DIR=%DIST_DIR%\Bin
 
 :: DEBUG MODE =========================================
 
@@ -22,15 +20,18 @@ if "%p3%"=="debug" goto debug_if
 goto debug_else
 
 :debug_if
-echo Debug MODE
+echo ^>^> Debug mode enabled
 set BUILD_TYPE=Debug
-set BUILD_X64_DIR=%BUILD_X64_DIR%-debug
-set BUILD_X86_DIR=%BUILD_X86_DIR%-debug
+set BUILD_DIR=%ROOT_DIR%\build-debug
+echo.
+
 goto debug_end
 
 :debug_else
-echo Release MODE
+echo ^>^> Release mode enabled
 set BUILD_TYPE=Release
+set BUILD_DIR=%ROOT_DIR%\build-release
+echo.
 
 :debug_end
 
@@ -44,54 +45,75 @@ if "%p3%"=="clean" goto clean_if
 goto clean_end
 
 :clean_if
-echo Clean
-rmdir /s /q "%BUILD_X64_DIR%"
-rmdir /s /q "%BUILD_X86_DIR%"
-rmdir /s /q "%DIST_DIR%"
+echo ^>^> Clean build directory and dist directory
+if exist "%BUILD_DIR%" rmdir /s /q "%BUILD_DIR%"
+if exist "%DIST_BIN_DIR%" rmdir /s /q "%DIST_BIN_DIR%"
+if exist "%DIST_DIR%\GalHub.exe" del /q "%DIST_DIR%\GalHub.exe"
+echo.
 
 :clean_end
 
 :: CLEAN END ==========================================
 
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
+if not exist "%DIST_BIN_DIR%" mkdir "%DIST_BIN_DIR%"
 
 :: BUILD ==============================================
 
-set DIST_BIN_DIR=%DIST_DIR%\Bin
-if not exist "%DIST_BIN_DIR%" mkdir "%DIST_BIN_DIR%"
 
-
-
+echo ^>^> Setup x86 environment and configure configure cmake project with x86
 call "%VC_VARS_BAT%" x86
+cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -G Ninja -S "%ROOT_DIR%" -B "%BUILD_DIR%/x86"
+echo.
 
-cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -G Ninja -S "%ROOT_DIR%" -B "%BUILD_X86_DIR%"
-cd "%BUILD_X86_DIR%"
+cd "%BUILD_DIR%/x86"
+
+echo ^>^> Build Hook-x86.dll and Helper.exe
 cmake --build . --config %BUILD_TYPE% -j 14 --target Hook Helper
+echo.
 
-echo Copy Hook-x86.dll
-copy "%BUILD_X86_DIR%\Hook.dll" "%DIST_BIN_DIR%\Hook-x86.dll" /b
-
-echo Copy Helper.exe
-copy "%BUILD_X86_DIR%\Helper.exe" "%DIST_BIN_DIR%\Helper.exe" /b
+echo ^>^> Install Hook-x86.dll and Helper.exe to dist directory
+cmake --install .
+echo.
 
 cd %ROOT_DIR%
 
 
-
+echo ^>^> Setup x64 environment and configure cmake project with x64
 call "%VC_VARS_BAT%" x64
+cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -G Ninja -S "%ROOT_DIR%" -B "%BUILD_DIR%/x64" -DGENERATE_QT:BOOL=0
+echo.
 
-cmake -DCMAKE_BUILD_TYPE=%BUILD_TYPE% -G Ninja -S "%ROOT_DIR%" -B "%BUILD_X64_DIR%"
-cd "%BUILD_X64_DIR%"
-cmake --build . --config %BUILD_TYPE% -j 14 --target Hook GalHub
+cd "%BUILD_DIR%/x64"
 
-echo Copy Hook-x64.dll
-copy "%BUILD_X64_DIR%\Hook.dll" "%DIST_BIN_DIR%\Hook-x64.dll" /b
+echo ^>^> Build Hook-x64.dll
+cmake --build . --config %BUILD_TYPE% -j 14 --target Hook
+echo.
 
-echo Copy GalHub.exe
-copy "%BUILD_X64_DIR%\GalHub.exe" "%DIST_DIR%\GalHub.exe" /b
+echo ^>^> Install Hook-x64.dll to dist directory
+cmake --install .
+echo.
 
 cd %ROOT_DIR%
 
+
+echo ^>^> Setup x64 environment and configure cmake project with x64-qt
+call "%VC_VARS_BAT%" x64
+if %BUILD_TYPE% == Debug (set QT6_ENABLE_CONSOLE=1) else (set QT6_ENABLE_CONSOLE=0)
+cmake -DCMAKE_BUILD_TYPE=Release -G Ninja -S "%ROOT_DIR%" -B "%BUILD_DIR%/x64-qt" -DGENERATE_QT:BOOL=1 -DQT6_ENABLE_CONSOLE:BOOL=%QT6_ENABLE_CONSOLE%
+echo.
+
+cd "%BUILD_DIR%/x64-qt"
+
+echo ^>^> Build GalHub.exe
+cmake --build . --config Release -j 14 --target GalHub
+echo.
+
+echo ^>^> Install GalHub.exe to dist directory
+cmake --install .
+echo.
+
+cd %ROOT_DIR%
 
 
 if "%p1%"=="run" goto run
@@ -100,8 +122,9 @@ if "%p3%"=="run" goto run
 exit /b 0
 
 :run
-echo Run
+echo ^>^> Run GalHub.exe
 cd "%DIST_DIR%"
 start GalHub.exe
+echo.
 
 exit /b 0

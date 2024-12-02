@@ -40,17 +40,18 @@ struct SystemFolders {
     static SystemFolders default_system_folders ();
 
     [[nodiscard]] std::map<String, Path> to_map () const;
-    static std::set<String> vars ();
+    static const std::vector<String> &vars ();
 };
 
 struct EnvFolders {
     Path env_folder;            // <gal hub root dir>\.env
     Path game_folder;           // <gal hub root dir>\.env\<game name>
+    Path original_game_folder;  // <gal hub root dir>\.env\<game name>\original
 
-    CONFIGOR_BIND(Json::value, EnvFolders, REQUIRED_WIDE(env_folder), REQUIRED_WIDE(game_folder));
+    CONFIGOR_BIND(Json::value, EnvFolders, REQUIRED_WIDE(env_folder), REQUIRED_WIDE(game_folder), REQUIRED_WIDE(original_game_folder));
 
     [[nodiscard]] std::map<String, Path> to_map () const;
-    static std::set<String> vars ();
+    static const std::vector<String> &vars ();
 };
 
 struct Rule {
@@ -80,7 +81,8 @@ struct Env {
     static Env read_env ();
     static void write_env (const Env &env);
 
-    static std::set<String> folder_vars ();
+    static const std::vector<String> &folder_vars ();
+    [[nodiscard]] Path folder_var_to_path (const String &var) const;
 };
 
 

@@ -4,8 +4,8 @@
 #include <fstream>
 #include <iostream>
 #include <utility>
-#include <minwindef.h>
-#include <windows.h>
+
+#include "../common/util.h"
 
 GameConfig::GameConfig (Path thumbnail_path, Path original_game_path, String game_name, std::vector<Rule> rules)
     : thumbnail_path(std::move(thumbnail_path)), original_game_path(std::move(original_game_path)),
@@ -15,6 +15,14 @@ GameConfig::GameConfig (Path thumbnail_path, Path original_game_path, String gam
 GameConfig::GameConfig (Path thumbnail_path, Path original_game_path, String game_name)
     : thumbnail_path(std::move(thumbnail_path)), original_game_path(std::move(original_game_path)),
       game_name(std::move(game_name)) {
+}
+
+Path GameConfig::thumbnail_full_path () const {
+    return std::filesystem::absolute(working_dir() / thumbnail_path);
+}
+
+Path GameConfig::original_game_full_path () const {
+    return std::filesystem::absolute(working_dir() / original_game_path);
 }
 
 void GameConfig::add_rule (const Rule &rule) {
@@ -127,21 +135,12 @@ void EnvManager::upd_config (const Config &config) {
     emit config_changed();
 }
 
-static Path working_dir () {
-    wchar_t path[MAX_PATH];
-    if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) {
-        throw std::runtime_error("Failed to get module file name");
-    }
-
-    return std::filesystem::absolute(path).parent_path();
-}
-
 Path EnvManager::config_path () {
     return working_dir() / CONFIG_FILE_NAME;
 }
 
 Path EnvManager::env_folder () const {
-    return working_dir() / config().env_folder_name;
+    return (working_dir() / config().env_folder_name).wstring() + L"\\";
 }
 
 void EnvManager::read_config () {
@@ -154,44 +153,68 @@ void EnvManager::read_config () {
         return;
     }
 
-    std::wfstream file(config_file_path, std::ios::in);
-    if (!file) {
-        throw std::runtime_error("Failed to open file");
-    }
+    String s = read_wstring_from_file(config_file_path);
 
-    String s, t;
-    while (std::getline(file, t)) {
-        s += t + L"\n";
+    try {
+        upd_config(Json::parse(s));
+    } catch (const std::exception &e) {
+        std::cerr << "Failed to parse config file: " << e.what() << std::endl;
+        upd_config(Config::default_config());
+        write_config();
     }
-
-    upd_config(Json::parse(s));
 }
 
 void EnvManager::write_config () const {
     Path config_file_path = config_path();
-    wprintf(L"write %s\n", config_file_path.c_str());
+    std::wcout << "Writing config to " << config_file_path << std::endl;
 
-    std::wfstream file(config_file_path, std::ios::out);
-    if (!file) {
-        throw std::runtime_error("Failed to open file");
-    }
-
-    file << Json::wrap(_config);
+    std::wstring json_str = Json::dump(_config);
+    write_wstring_to_file(config_file_path, json_str);
 }
 
 void EnvManager::gen_env_for_game (const String &game_name) const {
+    Env env = get_env_for_game(game_name);
+
+    // write env to file
+    Env::write_env(env);
+}
+
+Env EnvManager::get_env_for_game (const String &game_name) const {
+    Env env;
+
+    auto game_config = config().game_configs.at(game_name);
+
+    env.system_folders = SystemFolders::default_system_folders();
+
+    Path env_folder_ = env_folder();
+    Path game_folder_ = (env_folder_ / game_name).wstring() + L"\\";
+    Path original_game_folder_ = game_config.original_game_full_path().parent_path().wstring() + L"\\";
+
+    env.env_folders = {
+        env_folder_,
+        game_folder_,
+        original_game_folder_
+    };
+
+    env.rules = game_config.rules;
+    return env;
+}
+
+const std::vector<String> & EnvManager::folder_vars () {
+    return Env::folder_vars();
+}
+
+Path EnvManager::folder_var_to_path (const String &var, const String &game_name) const {
     Env env;
 
     env.system_folders = SystemFolders::default_system_folders();
 
     Path env_folder_ = env_folder();
+    Path game_folder_ = (env_folder_ / game_name).wstring() + L"\\";
     env.env_folders = {
         env_folder_,
-        env_folder_ / game_name
+        game_folder_,
     };
 
-    env.rules = config().game_configs.at(game_name).rules;
-
-    // write env to file
-    Env::write_env(env);
+    return env.folder_var_to_path(var);
 }

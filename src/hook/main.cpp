@@ -62,7 +62,7 @@ static std::optional<std::wstring> ModifyPath (const std::wstring &src) {
     // add \??\ back
     std::wstring dst = L"\\??\\"s + dst_without_prefix;
 
-#if DEBUG
+#ifdef DEBUG
     std::wstring debug_info = L"@MilkFeng ModifyPath: "s + src + L" -> "s + dst + L"\n"s;
     OutputDebugStringW(debug_info.c_str());
 #endif
@@ -230,9 +230,14 @@ static void CheckMinHookResult (const std::string &funcName, MH_STATUS mhStatus)
 static void Hook () {
     gEnv = Env::read_env();
 
-#if DEBUG
+#ifdef DEBUG
     std::wstring debug_info = L"@MilkFeng Rules Count: "s + std::to_wstring(gEnv.rules.size()) + L"\n"s;
     OutputDebugStringW(debug_info.c_str());
+
+    if (!gEnv.rules.empty()) {
+        std::wstring debug_info = L"@MilkFeng Rules[0]: "s + gEnv.rules[0].src_base + L"/"s + gEnv.rules[0].src.c_str() + L" -> "s + gEnv.rules[0].dst_name + L"\n"s;
+        OutputDebugStringW(debug_info.c_str());
+    }
 #endif
 
     CheckMinHookResult("MH_Initialize"s, MH_Initialize());
@@ -268,7 +273,7 @@ static void Unhook () {
 
 
 BOOL WINAPI DllMain (HINSTANCE hInstance, ULONG ulReason, LPVOID Reserved) {
-#if DEBUG
+#ifdef DEBUG
     std::wstring debug_info = L"@MilkFeng DllMain";
     OutputDebugStringW(debug_info.c_str());
 #endif
