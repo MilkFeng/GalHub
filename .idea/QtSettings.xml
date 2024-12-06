@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="QtSettings">
+    <option name="myCurrentProfile" value="Release-x64-qt" />
+    <option name="mySettingsPerProfile">
+      <map>
+        <entry key="Release-x64-qt">
+          <value>
+            <PerProfileState>
+              <option name="myQmlPath" value="C:/Qt/6.5.3/Qt6.5.3-Windows-x86_64-VS2022-17.10.0-staticFull/./qml" />
+              <option name="myQtBinPath" value="C:/Qt/6.5.3/Qt6.5.3-Windows-x86_64-VS2022-17.10.0-staticFull/bin" />
+            </PerProfileState>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
